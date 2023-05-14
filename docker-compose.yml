@@ -1,0 +1,67 @@
+version: '3.4'
+services:
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - fastapi
+    ports:
+      - 80:80
+
+  postgres:
+    image: postgres:alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema:/docker-entrypoint-initdb.d
+    env_file:
+      - ./.env
+
+  db:
+    build: db
+    restart: on-failure
+    env_file:
+      - ./.env
+    depends_on:
+      - postgres
+
+  elasticsearch:
+    image: elasticsearch:8.6.2
+    restart: always
+    environment:
+      - xpack.security.enabled=false
+      - 'ES_JAVA_OPTS=-Xms1000m -Xmx1000m'
+      - discovery.type=single-node
+    volumes:
+      - elasticsearch_data:/opt/elasticsearch/data
+    env_file:
+      - ./.env
+    depends_on:
+      - postgres
+
+  etl:
+    build: ./postgres_to_es
+    restart: always
+    env_file:
+      - ./.env
+    depends_on:
+      - elasticsearch
+      - postgres
+
+  fastapi:
+    build: ./fast_api
+    restart: always
+    env_file:
+      - ./.env
+    depends_on:
+      - elasticsearch
+      - redis
+
+  redis:
+    image: redis:7.0.9-alpine
+
+volumes:
+  postgres_data:
+  elasticsearch_data:
