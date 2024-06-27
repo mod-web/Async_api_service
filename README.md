@@ -1,4 +1,4 @@
-# Fast API service (ES -> fast_api)
+# FastAPI service (ES -> fast_api)
 
 ## How to start the project:
 
